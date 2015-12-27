@@ -6,7 +6,8 @@ import sys
 import pyexcel as pe
 from pyexcel.ext import xlsx, xls
 
-file_obj = open('api.txt', 'w+')
+api_file_obj = open('api.txt', 'w+')
+service_file_obj = open('service.txt', 'w+')
 
 arg_type = {0: 'Str', 1: 'Int'}
 arg_required = {0: '', 1: 'required=True'}
@@ -32,19 +33,19 @@ def write_api(api_name, args_list):
         args_comment += '{arg}?='.format(arg=arg)
 
     # @api('/xxxx')
-    file_obj.write('    @api("/{apiname}")\r\n'.format(apiname=api_name))
+    api_file_obj.write('    @api("/{apiname}")\r\n'.format(apiname=api_name))
     # def xxxx(self):
-    file_obj.write('    def {apiname}(self):\r\n'.format(apiname=api_name))
+    api_file_obj.write('    def {apiname}(self):\r\n'.format(apiname=api_name))
     # comment
-    file_obj.write('        """\r\n')
-    file_obj.write('            /webapi/pre?fix/{apiname}?{argscomment}\r\n'.format(
+    api_file_obj.write('        """\r\n')
+    api_file_obj.write('            /webapi/pre?fix/{apiname}?{argscomment}\r\n'.format(
         apiname=api_name, argscomment=args_comment
     ))
-    file_obj.write('        """\r\n\r\n')
+    api_file_obj.write('        """\r\n\r\n')
     # args_spec
-    file_obj.write('        args_spec = {\r\n')
+    api_file_obj.write('        args_spec = {\r\n')
     for arg, value in args.items():
-        file_obj.write("            '{arg}': fields.{type}({required}{missing}),\r\n".format(
+        api_file_obj.write("            '{arg}': fields.{type}({required}{missing}),\r\n".format(
             arg=arg,
             type=arg_type[value[0]],
             required=arg_required[value[1]],
@@ -52,9 +53,21 @@ def write_api(api_name, args_list):
                 space='' if arg_required[value[1]] is '' else ', ',
                 value=value[2]),
         ))
-    file_obj.write('        }\r\n')
-    file_obj.write('        arg = args_parsr.parse(args_spec)\r\n\r\n')
-    file_obj.write('        return srv.{srvname}(arg)\r\n\r\n\r\n'.format(srvname=api_name))
+    api_file_obj.write('        }\r\n')
+    api_file_obj.write('        arg = args_parsr.parse(args_spec)\r\n\r\n')
+    api_file_obj.write('        return srv.{srvname}(arg)\r\n\r\n\r\n'.format(srvname=api_name))
+
+def write_service(api_name, args_list):
+    # def xxx(args):
+    service_file_obj.write('def {apiname}(args):\r\n'.format(apiname=api_name))
+    # args
+    args_name = []
+    for i in range(0, len(args_list)):
+        if i % 4 == 0:
+            args_name.append(args_list[i])
+    for arg in args_name:
+        service_file_obj.write('    if {arg} in args:\r\n'.format(arg=arg))
+        service_file_obj.write('        {arg} = args[{arg}]\r\n\r\n'.format(arg=arg))
 
 
 API_FIELD = '*Api'
@@ -66,6 +79,7 @@ api_value = []
 def gen_by_api():
     for api in api_value:
         write_api(api[API_FIELD][0], api[ARGS_FIELD])
+        write_service(api[API_FIELD][0], api[ARGS_FIELD])
 
 
 def code_gen(base_dir):
@@ -108,4 +122,4 @@ def code_gen(base_dir):
 if __name__ == '__main__':
     code_gen(os.getcwd())
 
-    file_obj.close()
+    api_file_obj.close()
