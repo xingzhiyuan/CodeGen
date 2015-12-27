@@ -6,13 +6,69 @@ import sys
 import pyexcel as pe
 from pyexcel.ext import xlsx, xls
 
-#class Api(object):
+file_obj = open('api.txt', 'w+')
+
+arg_type = {0: 'Str', 1: 'Int'}
+arg_required = {0: '', 1: 'required=True'}
+arg_missing = {'-': ''}
+
+
+def write_api(api_name, args_list):
+    # args perse
+    args = {}
+    for i in range(0, len(args_list)):
+        if i % 4 == 0:
+            key = args_list[i]
+            args[key] = []
+            continue
+
+        args[key].append(args_list[i])
+
+    # gen args comment
+    args_comment = ''
+    for arg in args:
+        if args_comment != '':
+            args_comment += '&'
+        args_comment += '{arg}?='.format(arg=arg)
+
+    # @api('/xxxx')
+    file_obj.write('@api("/{apiname}")\r\n'.format(apiname=api_name))
+    # def xxxx(self):
+    file_obj.write('def {apiname}(self):\r\n'.format(apiname=api_name))
+    # comment
+    file_obj.write('    """\r\n')
+    file_obj.write('        /webapi/pre?fix/{apiname}?{argscomment}\r\n'.format(
+        apiname=api_name, argscomment=args_comment
+    ))
+    file_obj.write('    """\r\n\r\n')
+    # args_spec
+    file_obj.write('    args_spec = {\r\n')
+    for arg, value in args.items():
+        file_obj.write("        '{arg}': fields.{type}({required}{missing}),\r\n".format(
+            arg=arg,
+            type=arg_type[value[0]],
+            required=arg_required[value[1]],
+            missing='' if value[2] in arg_missing else '{space}missing={value}'.format(
+                space='' if arg_required[value[1]] is '' else ', ',
+                value=value[2]),
+        ))
+    file_obj.write('    }\r\n')
+    file_obj.write('    arg = args_parsr.parse(args_spec)\r\n\r\n')
+    file_obj.write('    return srv.{srvname}(arg)\r\n\r\n\r\n'.format(srvname=api_name))
+
+
+API_FIELD = '*Api'
+ARGS_FIELD = '*Args'
+api_field = {API_FIELD: 'api', ARGS_FIELD: 'args'}
+api_value = []
+
+
+def gen_by_api():
+    for api in api_value:
+        write_api(api[API_FIELD][0], api[ARGS_FIELD])
 
 
 def code_gen(base_dir):
-    # if not base_dir in sys.path:
-    #     sys.path.append(base_dir)
-
     for filename in os.listdir(base_dir):
         if filename.endswith(('xlsx')):
             print filename
@@ -20,20 +76,36 @@ def code_gen(base_dir):
             sheet = pe.get_sheet(file_name=os.path.join(base_dir, filename))
 
             # row_range
+            per_api = {}
             for r in sheet.row_range():
-                # note
-                if sheet.cell_value(r, 0).startswith('*') or sheet.cell_value(r, 0) == '':
-                    continue
+                if sheet.cell_value(r, 0) != '':
+                    head_cell = sheet.cell_value(r, 0)
+                # parse field
+                if head_cell.startswith('*'):
+                    # note
+                    if not head_cell in api_field:
+                        continue
+
+                    if head_cell == API_FIELD and len(per_api):
+                        api_value.append(per_api.copy())
+                        per_api.clear()
+
+                    if sheet.cell_value(r, 0) != '':
+                        per_api[head_cell] = []
+
                 for c in sheet.column_range():
-                    # empty
+                    if c == 0: continue
                     if sheet.cell_value(r, c) == '':
                         continue
-                    # identifier
-                    # for c == 0:
-                    #
-                    # print (sheet.cell_value(r, c))
+                    per_api[head_cell].append(sheet.cell_value(r, c))
+
+            api_value.append(per_api.copy())
+            per_api.clear()
+
+            gen_by_api()
 
 
 if __name__ == '__main__':
-    print os.getcwd()
     code_gen(os.getcwd())
+
+    file_obj.close()
