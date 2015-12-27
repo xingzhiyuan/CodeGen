@@ -32,19 +32,19 @@ def write_api(api_name, args_list):
         args_comment += '{arg}?='.format(arg=arg)
 
     # @api('/xxxx')
-    file_obj.write('@api("/{apiname}")\r\n'.format(apiname=api_name))
+    file_obj.write('    @api("/{apiname}")\r\n'.format(apiname=api_name))
     # def xxxx(self):
-    file_obj.write('def {apiname}(self):\r\n'.format(apiname=api_name))
+    file_obj.write('    def {apiname}(self):\r\n'.format(apiname=api_name))
     # comment
-    file_obj.write('    """\r\n')
-    file_obj.write('        /webapi/pre?fix/{apiname}?{argscomment}\r\n'.format(
+    file_obj.write('        """\r\n')
+    file_obj.write('            /webapi/pre?fix/{apiname}?{argscomment}\r\n'.format(
         apiname=api_name, argscomment=args_comment
     ))
-    file_obj.write('    """\r\n\r\n')
+    file_obj.write('        """\r\n\r\n')
     # args_spec
-    file_obj.write('    args_spec = {\r\n')
+    file_obj.write('        args_spec = {\r\n')
     for arg, value in args.items():
-        file_obj.write("        '{arg}': fields.{type}({required}{missing}),\r\n".format(
+        file_obj.write("            '{arg}': fields.{type}({required}{missing}),\r\n".format(
             arg=arg,
             type=arg_type[value[0]],
             required=arg_required[value[1]],
@@ -52,9 +52,9 @@ def write_api(api_name, args_list):
                 space='' if arg_required[value[1]] is '' else ', ',
                 value=value[2]),
         ))
-    file_obj.write('    }\r\n')
-    file_obj.write('    arg = args_parsr.parse(args_spec)\r\n\r\n')
-    file_obj.write('    return srv.{srvname}(arg)\r\n\r\n\r\n'.format(srvname=api_name))
+    file_obj.write('        }\r\n')
+    file_obj.write('        arg = args_parsr.parse(args_spec)\r\n\r\n')
+    file_obj.write('        return srv.{srvname}(arg)\r\n\r\n\r\n'.format(srvname=api_name))
 
 
 API_FIELD = '*Api'
